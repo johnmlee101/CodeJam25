@@ -88,13 +88,13 @@
     <div id="captcha-container">
         <div id="instructions">To solve this captcha, please click 2 times a second for 10 seconds to prove you are a human.</div>
         <div id="failure"></div>
-        <button id="pressButton">Press</button>
         <p class="hidden" id="clickCounter">
             0
         </p>
         <div class="hidden" id="timeRemaining">10 seconds remaining.</div>
         <!-- <div class="hidden" id="cpsRate">CPS Rate: <span id="cpsValue">0</span></div> -->
         <canvas id="progressCanvas"></canvas>
+        <button id="pressButton">Press</button>
         <div class="hidden" id="encouragement">
         </div>
     </div>
@@ -216,6 +216,7 @@
             button.addEventListener('click', () => {
                 clicks++;
                 if (startTime === null) {
+                    console.log("Starting the CAPTCHA timer.");
                     // Set failure div to clear.
                     document.querySelector('#failure').textContent = '';
                     startTime = Date.now();
@@ -223,17 +224,20 @@
                     var lastEncouragement = Date.now();
                     interval = setInterval(() => {
                         if (elapsedTime >= TOTAL_DURATION) {
+                            clearInterval(interval);
                             var clicksPerSecond = clicks / elapsedTime;
                             if (clicksPerSecond >= CPS_LOWER_BOUND && clicksPerSecond <= CPS_UPPER_BOUND) {
                                 captchaSuccess(); // Success condition
                             } else {
                                 captchaFailure(); // Failure condition
                             }
-                            clearInterval(interval);
+
                         }
 
                         // Randomly encourage the user to keep going.
-                        if (Math.random() < 0.25 && ((Date.now() - lastEncouragement) > 1000)) {
+                        console.log(Date.now() - lastEncouragement);
+                        if (Math.random() < 0.5 && ((Date.now() - lastEncouragement) > 2000)) {
+
                             var encouragementMessages = [
                                 "Keep going!",
                                 "You're doing great!",
@@ -244,14 +248,14 @@
                                 "Stay focused!",
                                 "You're on the right track!",
                                 "Keep those clicks coming!",
-                                "YYou will get everything you deserve!",
+                                "You will get everything you deserve!",
                                 "You are a human, you can do this!",
                             ];
                             var randomMessage = encouragementMessages[Math.floor(Math.random() * encouragementMessages.length)];
                             document.querySelector('#encouragement').textContent = randomMessage;
                             // Reset the last encouragement time
                             lastEncouragement = Date.now();
-                        } else {
+                        } else if ((Date.now() - lastEncouragement) > 1000) {
                             document.querySelector('#encouragement').textContent = '';
                         }
                     }, 100);
