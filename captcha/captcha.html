@@ -259,13 +259,11 @@
                             } else {
                                 captchaFailure(); // Failure condition
                             }
-
                         }
 
                         // Randomly encourage the user to keep going.
                         console.log(Date.now() - lastEncouragement);
                         if (Math.random() < 0.5 && ((Date.now() - lastEncouragement) > 2000)) {
-
                             var encouragementMessages = [
                                 "Keep going!",
                                 "You're doing great!",
