@@ -58,7 +58,10 @@
         }
 
         #pressButton {
-            width: 100px;
+            position: fixed;
+            bottom: 0;
+            left: 10px;
+            width: 360px;
             height: 50px;
             font-size: 20px;
             margin: 20px auto;
@@ -75,9 +78,9 @@
         #progressCanvas {
             display: border-box;
             background-color: #990f0f;
-            border: 1px solid black;
+            border: 5px solid black;
             margin: 5px;
-            width: 380px;
+            width: 370px;
             height: 50px;
             float: left;
         }
@@ -157,8 +160,6 @@
                 document.querySelector('#instructions').textContent = `To solve this captcha, please click between ${CPS_LOWER_BOUND.toFixed(1)} and ${CPS_UPPER_BOUND.toFixed(1)} times a second for ${TOTAL_DURATION.toFixed(1)} seconds to prove you are a human.`;
             }
 
-            initializeGame();
-
             function captchaFailure() {
                 // Clear the canvas and reset the click counter, and let the user know they failed.
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -166,12 +167,13 @@
                 const fastSlowMessage = clicksPerSecond > CPS_UPPER_BOUND ? "You clicked too fast!" : "You clicked too slow!";
                 failure.textContent = `Failed! ${fastSlowMessage} Retry?\n\n`;
                 timeRemaining.textContent = "0 seconds remaining.";
-                encouragement.textContent = '';
                 CPS_GAP *= 1.2; // Increase the gap for the next attempt Can't make it impossible!
                 initializeGame();
                 if (interval) {
                     clearInterval(interval);
                 }
+
+                encouragement.textContent = '';
 
                 // Disable the button for 2 seconds.
                 button.disabled = true;
@@ -212,6 +214,8 @@
                     if (clicks != 0) requestAnimationFrame(updateCPSRate);
                 }
             }
+
+            initializeGame();
 
             button.addEventListener('click', () => {
                 clicks++;
