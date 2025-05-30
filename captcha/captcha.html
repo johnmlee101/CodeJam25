@@ -157,7 +157,7 @@
                 if (SHOW_ENCOURAGEMENT) document.querySelector('#encouragement').classList.remove('hidden');
                 else document.querySelector('#encouragement').classList.add('hidden');
 
-                document.querySelector('#instructions').textContent = `To solve this captcha, please click between ${CPS_LOWER_BOUND.toFixed(1)} and ${CPS_UPPER_BOUND.toFixed(1)} times a second for ${TOTAL_DURATION.toFixed(1)} seconds to prove you are a human.`;
+                document.querySelector('#instructions').textContent = `Please click between ${CPS_LOWER_BOUND.toFixed(1)} and ${CPS_UPPER_BOUND.toFixed(1)} times a second for ${TOTAL_DURATION.toFixed(1)} seconds to prove you are a human with a high five!`;
             }
 
             function captchaFailure() {
@@ -194,12 +194,27 @@
                     ctx.fillStyle = '#f44336';
                     ctx.fillRect(0, 0, canvas.width, canvas.height); // Draw the red background
 
+                    // Add noise to the background
+                    for (var i = 0; i < canvas.width; i++) {
+                        for (var j = 0; j < canvas.height; j++) {
+                            if (Math.random() < 0.05) { // 5% chance to draw a pixel
+                                ctx.fillStyle = `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 0.9)`;
+                                ctx.fillRect(i, j, 1, 1);
+                            }
+                        }
+                    }
+
                     // The % of canvas that will be green is based off of 2x the desired CPS rate * the proportion of the lower and upper bound to it.
                     var maxWidthPerc = CPS_UPPER_BOUND  * 2;
                     var greenStart = (CPS_LOWER_BOUND / maxWidthPerc) * canvas.width;
                     var greenEnd = (CPS_UPPER_BOUND / maxWidthPerc) * canvas.width;
-                    ctx.fillStyle = '#4CAF50'; // Green color
+                    ctx.fillStyle = '#4CAF5077'; // Green color
                     ctx.fillRect(greenStart, 0, greenEnd - greenStart, canvas.height); // Draw the green background
+
+                    // Draw a left hand high five on the greenStart
+                    ctx.fillStyle = 'white'; // Hand color
+                    ctx.font = '30px Arial';
+                    ctx.fillText('🫷', greenStart - 10, canvas.height / 2 + 20); // Draw the emoji at the start of the green area
 
                     // Draw the CPS cursor
                     var cursorX = (clicksPerSecond / maxWidthPerc) * canvas.width;
@@ -208,8 +223,17 @@
                     } else if (cursorX > canvas.width) {
                         cursorX = canvas.width; // Ensure cursor does not go out of bounds
                     }
-                    ctx.fillStyle = 'blue'; // Cursor color
+                    ctx.fillStyle = '#0000ff88'; // Cursor color blue
                     ctx.fillRect(cursorX - 2, 0, 4, canvas.height); // Draw the cursor
+                    // Draw an emoji over the cursor
+                    ctx.font = '30px Arial';
+                    ctx.fillStyle = 'white'; // Emoji color
+                    ctx.fillText('🫸', cursorX - 28, canvas.height / 2 + 20); // Draw the emoji at the cursor position 🫸 👆-17
+
+                    // Draw a face looking right now
+                    ctx.fillText('🙂', 0, canvas.height / 2 + 20); // Draw the emoji at the cursor position
+                    ctx.fillText('🙂‍↔️', canvas.width - 40, canvas.height / 2 + 20); // Draw the emoji at the cursor position
+
 
                     if (clicks != 0) requestAnimationFrame(updateCPSRate);
                 }
@@ -251,7 +275,7 @@
                                 "Just a little more!",
                                 "Stay focused!",
                                 "You're on the right track!",
-                                "Keep those clicks coming!",
+                                "Keep those high fives coming!",
                                 "You will get everything you deserve!",
                                 "You are a human, you can do this!",
                             ];
