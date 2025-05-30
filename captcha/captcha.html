@@ -1,52 +1,265 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-  <meta charset="utf-8">
-  <title>Joel</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <title>Joel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <style type="text/css">
-    html,
-    body {
-      background: pink;
-      margin: 0;
-      padding: 0;
-      font-family: sans-serif;
-    }
+    <style type="text/css">
+        html,
+        body {
+            background: pink;
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+        }
 
-    #captcha-container {
-      background: white;
-      width: 390px;
-      height: 300px;
-    }
+        #captcha-container {
+            background: #f0f0f0;
+            width: 390px;
+            height: 300px;
+        }
 
-    /* Your style here... */
-  </style>
+        /* CSS Variables for color */
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #f44336;
+            --text-color: #fff;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #failure {
+            text-align: center;
+            margin: 0 auto;
+            background-color: red;
+            color: white;
+            text-align: center;
+            font-size: 20px;
+            padding: 10px 0px;
+        }
+
+        #failure:empty {
+            display: none;
+        }
+
+        #encouragement {
+            text-align: center;
+            font-size: 20px;
+            padding: 10px 0px;
+            color: #333;
+        }
+
+        #encouragement:empty {
+            display: none;
+        }
+
+        #pressButton {
+            width: 100px;
+            height: 50px;
+            font-size: 20px;
+            margin: 20px auto;
+            display: block;
+        }
+
+        #instructions {
+            text-align: center;
+            font-size: 18px;
+            padding: 10px;
+            font-weight: bold;
+        }
+
+        #progressCanvas {
+            display: border-box;
+            background-color: #990f0f;
+            border: 1px solid black;
+            margin: 5px;
+            width: 380px;
+            height: 50px;
+            float: left;
+        }
+    </style>
 </head>
 
 <body>
-  <div id="captcha-container">
-    <!-- Add your CAPTCHA here: -->
-    Hello world!
+    <div id="captcha-container">
+        <div id="instructions">To solve this captcha, please click 2 times a second for 10 seconds to prove you are a human.</div>
+        <div id="failure"></div>
+        <button id="pressButton">Press</button>
+        <p class="hidden" id="clickCounter">
+            0
+        </p>
+        <div class="hidden" id="timeRemaining">10 seconds remaining.</div>
+        <!-- <div class="hidden" id="cpsRate">CPS Rate: <span id="cpsValue">0</span></div> -->
+        <canvas id="progressCanvas"></canvas>
+        <div class="hidden" id="encouragement">nice!
+        </div>
+    </div>
 
-    <!-- We've added a sample button. Feel free to remove it: -->
-    <button id="solve">
-      Solve!
-    </button>
-  </div>
 
-  <script type="text/javascript">
-    (function(window, document){
-      // This is how you tell the parent window that the CAPTCHA was successful.
-      function captchaSuccess() {
-        window.top.postMessage("success", '*');
-      }
 
-      // Your CAPTCHA code goes here, we've added a simple example below:
-      document.getElementById('solve')
-           .addEventListener('click', () => captchaSuccess());
+    <script type="text/javascript">
+        (function (window, document) {
+            // This is how you tell the parent window that the CAPTCHA was successful.
+            function captchaSuccess() {
+                window.top.postMessage("success", '*');
+            }
 
-    })(window, document);
-  </script>
+            // These are the parameters for the CAPTCHA.
+            var ADD_RANDOMNESS = true;
+            var TOTAL_DURATION = 4;
+            var CPS_LOWER_BOUND = 5;
+            var CPS_UPPER_BOUND = 5.2;
+            var CPS_GAP = 0.2;
+            var SHOW_CPS = false;
+            var SHOW_TIMER = false;
+            var SHOW_ENCOURAGEMENT = true;
+
+            // The idea is that the button must pressed 2 times a second for 10 seconds. If the rate exceeds this (3 times a second), or below 1 times a second, the CAPTCHA fails.
+            var button = document.querySelector('button');
+            var clickCounter = document.querySelector('#clickCounter');
+            var timeRemaining = document.querySelector('#timeRemaining');
+            var failure = document.querySelector('#failure');
+            var encouragement = document.querySelector('#encouragement');
+            var clicks = 0;
+            var startTime = null;
+            var interval = null;
+            var elapsedTime = 0;
+
+            // Canvas init
+            var canvas = document.getElementById('progressCanvas');
+            var ctx = canvas.getContext('2d');
+            canvas.width = 380;
+            canvas.height = 50;
+
+            function initializeGame() {
+                timeRemaining.textContent = "0 seconds remaining.";
+                clicks = 0;
+                startTime = null;
+                elapsedTime = 0;
+                if (ADD_RANDOMNESS) {
+                    // Randomize the CPS bounds a bit.
+                    TOTAL_DURATION += Math.random() * 4;
+                    CPS_LOWER_BOUND = 3 + Math.random() * 5;
+                    CPS_UPPER_BOUND = CPS_LOWER_BOUND + CPS_GAP;
+                }
+
+                if (SHOW_CPS) clickCounter.classList.remove('hidden');
+                else clickCounter.classList.add('hidden');
+                if (SHOW_TIMER) timeRemaining.classList.remove('hidden');
+                else timeRemaining.classList.add('hidden');
+                if (SHOW_ENCOURAGEMENT) document.querySelector('#encouragement').classList.remove('hidden');
+                else document.querySelector('#encouragement').classList.add('hidden');
+
+                document.querySelector('#instructions').textContent = `To solve this captcha, please click between ${CPS_LOWER_BOUND.toFixed(1)} and ${CPS_UPPER_BOUND.toFixed(1)} times a second for ${TOTAL_DURATION.toFixed(1)} seconds to prove you are a human.`;
+            }
+
+            initializeGame();
+
+            function captchaFailure() {
+                // Clear the canvas and reset the click counter, and let the user know they failed.
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                var clicksPerSecond = clicks / elapsedTime;
+                const fastSlowMessage = clicksPerSecond > CPS_UPPER_BOUND ? "You clicked too fast!" : "You clicked too slow!";
+                failure.textContent = `Failed! ${fastSlowMessage} Retry?\n\n`;
+                timeRemaining.textContent = "0 seconds remaining.";
+                encouragement.textContent = '';
+                CPS_GAP *= 1.2; // Increase the gap for the next attempt Can't make it impossible!
+                initializeGame();
+                if (interval) {
+                    clearInterval(interval);
+                }
+
+                // Disable the button for 2 seconds.
+                button.disabled = true;
+                setTimeout(() => {
+                    button.disabled = false;
+                }, 2000);
+            }
+
+            function updateCPSRate() {
+                if (startTime !== null) {
+                    if (SHOW_TIMER) timeRemaining.textContent = `${(TOTAL_DURATION - elapsedTime).toFixed(2)} seconds remaining.`;
+                    elapsedTime = (Date.now() - startTime) / 1000; // in seconds
+                    var clicksPerSecond = clicks / elapsedTime;
+                    if (SHOW_CPS) clickCounter.textContent = clicksPerSecond.toFixed(2);
+
+                    // The Canvas will show a progress bar. There will be a red bar on both sides if the CPS is too high or too low. Otherwise it will be green where the cursor that shows CPS will go.
+                    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+                    ctx.fillStyle = '#f44336';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height); // Draw the red background
+
+                    // The % of canvas that will be green is based off of 2x the desired CPS rate * the proportion of the lower and upper bound to it.
+                    var maxWidthPerc = CPS_UPPER_BOUND  * 2;
+                    var greenStart = (CPS_LOWER_BOUND / maxWidthPerc) * canvas.width;
+                    var greenEnd = (CPS_UPPER_BOUND / maxWidthPerc) * canvas.width;
+                    ctx.fillStyle = '#4CAF50'; // Green color
+                    ctx.fillRect(greenStart, 0, greenEnd - greenStart, canvas.height); // Draw the green background
+
+                    // Draw the CPS cursor
+                    var cursorX = (clicksPerSecond / maxWidthPerc) * canvas.width;
+                    if (cursorX < 0) {
+                        cursorX = 0; // Ensure cursor does not go out of bounds
+                    } else if (cursorX > canvas.width) {
+                        cursorX = canvas.width; // Ensure cursor does not go out of bounds
+                    }
+                    ctx.fillStyle = 'blue'; // Cursor color
+                    ctx.fillRect(cursorX - 2, 0, 4, canvas.height); // Draw the cursor
+
+                    if (clicks != 0) requestAnimationFrame(updateCPSRate);
+                }
+            }
+
+            button.addEventListener('click', () => {
+                clicks++;
+                if (startTime === null) {
+                    // Set failure div to clear.
+                    document.querySelector('#failure').textContent = '';
+                    startTime = Date.now();
+                    requestAnimationFrame(updateCPSRate);
+                    var lastEncouragement = Date.now();
+                    interval = setInterval(() => {
+                        if (elapsedTime >= TOTAL_DURATION) {
+                            var clicksPerSecond = clicks / elapsedTime;
+                            if (clicksPerSecond >= CPS_LOWER_BOUND && clicksPerSecond <= CPS_UPPER_BOUND) {
+                                captchaSuccess(); // Success condition
+                            } else {
+                                captchaFailure(); // Failure condition
+                            }
+                            clearInterval(interval);
+                        }
+
+                        // Randomly encourage the user to keep going.
+                        if (Math.random() < 0.25 && ((Date.now() - lastEncouragement) > 1000)) {
+                            var encouragementMessages = [
+                                "Keep going!",
+                                "You're doing great!",
+                                "Almost there!",
+                                "Don't give up!",
+                                "You can do it!",
+                                "Just a little more!",
+                                "Stay focused!",
+                                "You're on the right track!",
+                                "Keep those clicks coming!",
+                                "YYou will get everything you deserve!",
+                                "You are a human, you can do this!",
+                            ];
+                            var randomMessage = encouragementMessages[Math.floor(Math.random() * encouragementMessages.length)];
+                            document.querySelector('#encouragement').textContent = randomMessage;
+                            // Reset the last encouragement time
+                            lastEncouragement = Date.now();
+                        } else {
+                            document.querySelector('#encouragement').textContent = '';
+                        }
+                    }, 100);
+                }
+            });
+
+        })(window, document);
+    </script>
 </body>
+
 </html>
